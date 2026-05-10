@@ -1,0 +1,2112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monstruos Verbales RPG</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+:root{
+  --bg:#080818;--panel:#0f0f28;--panel2:#161640;--border:#252560;
+  --gold:#ffd700;--red:#ff3a3a;--green:#3aff88;--blue:#3a88ff;
+  --purple:#cc44ff;--orange:#ff8c3a;--cyan:#3affee;--white:#dde0ff;
+  --darkred:#3a0000;--darkblue:#00003a;--darkgreen:#003a1a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100vh;background:var(--bg);font-family:'Press Start 2P',monospace;color:var(--white);overflow-x:hidden;font-size:13px;}
+.screen{display:none;width:100%;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+
+/* ══════════ TITLE ══════════ */
+#scr-title{align-items:center;justify-content:center;text-align:center;
+  background:radial-gradient(ellipse at center,#1a083a 0%,var(--bg) 70%);padding:20px;}
+.title-logo{font-size:clamp(16px,4vw,34px);color:var(--gold);line-height:1.9;
+  text-shadow:0 0 30px #ff8800,0 4px 0 #774400;animation:glow 2s ease-in-out infinite alternate;}
+@keyframes glow{from{text-shadow:0 0 20px #ff8800,0 4px 0 #774400}to{text-shadow:0 0 60px #ffcc00,0 0 100px #ff6600,0 4px 0 #aa5500}}
+.parade{font-size:48px;margin:16px 0;display:flex;gap:12px;justify-content:center;animation:bob 2s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.title-desc{font-size:clamp(6px,1.1vw,9px);color:#aaa;line-height:2.4;max-width:480px;margin:8px auto;}
+.big-btn{font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.6vw,13px);
+  background:linear-gradient(180deg,#3a88ff,#1a44bb);color:#fff;border:3px solid #88aaff;
+  padding:14px 32px;cursor:pointer;margin-top:20px;text-shadow:0 2px 0 #000;
+  box-shadow:0 5px 0 #0a2266,0 0 30px rgba(58,136,255,.4);
+  transition:transform .1s,filter .1s;animation:btnpulse 1.2s ease-in-out infinite;}
+@keyframes btnpulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.big-btn:hover{filter:brightness(1.25);}
+.big-btn:active{transform:translateY(4px)!important;box-shadow:0 1px 0 #0a2266;}
+
+/* ══════════ MAP ══════════ */
+#scr-map{padding:8px;background:var(--bg);}
+.map-topbar{background:var(--panel);border:2px solid var(--border);padding:8px 12px;
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+.map-title-txt{font-size:8px;color:var(--gold);}
+.map-player-stats{font-size:6px;color:var(--cyan);text-align:right;line-height:2.1;}
+#map-wrap{flex:1;overflow:auto;background:var(--panel);border:2px solid var(--border);border-radius:0;
+  display:flex;align-items:flex-start;justify-content:center;padding:10px;min-height:460px;}
+#mapCanvas{cursor:pointer;display:block;}
+.map-legend{background:var(--panel);border:2px solid var(--border);padding:7px 12px;
+  font-size:6px;color:#888;display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;}
+
+/* ══════════ BATTLE ══════════ */
+#scr-battle{padding:8px;gap:6px;background:var(--bg);}
+
+/* HUD */
+.hud{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;
+  background:var(--panel);border:2px solid var(--border);padding:8px;}
+.hside{font-size:6px;line-height:1;}
+.hside.right{text-align:right;}
+.hmid{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.lvlbadge{background:var(--gold);color:#000;font-size:7px;padding:3px 8px;white-space:nowrap;}
+.barlbl{font-size:5px;margin-bottom:2px;margin-top:5px;}
+.bar{height:9px;background:#1a1a2a;border:1px solid #333;overflow:hidden;position:relative;}
+.barfill{height:100%;transition:width .4s ease;}
+.barfill::after{content:'';position:absolute;inset:0 0 50% 0;background:rgba(255,255,255,.2);}
+.bhp-p{background:linear-gradient(90deg,#1aff55,#3aff88);}
+.bhp-e{background:linear-gradient(90deg,#ff3a3a,#ff8c3a);}
+.bmp{background:linear-gradient(90deg,#1a55ff,#3a88ff);}
+.bexp{height:5px;background:linear-gradient(90deg,var(--gold),#ff8800);}
+.scoreval{font-size:11px;color:var(--gold);}
+
+/* STREAK */
+.streak-hud{background:var(--panel);border:2px solid var(--border);padding:5px 10px;
+  font-size:7px;display:flex;align-items:center;gap:8px;}
+.fireicon{display:inline-block;animation:firef .5s steps(2) infinite;}
+@keyframes firef{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(30deg)}}
+
+/* ARENA */
+.arena{background:var(--panel);border:2px solid var(--border);height:230px;
+  position:relative;overflow:hidden;
+  background-image:linear-gradient(180deg,#08082a 0%,#12123a 55%,#1a1a28 55%,#222232 100%);}
+.arena::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.04) 0px,rgba(0,0,0,.04) 1px,transparent 1px,transparent 3px);}
+.arena-ground{position:absolute;bottom:70px;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,#3a3a6a 20%,#3a3a6a 80%,transparent);}
+.sprite{position:absolute;bottom:72px;font-size:56px;line-height:1;
+  filter:drop-shadow(0 6px 2px rgba(0,0,0,.6));transition:left .3s,right .3s;}
+#spr-player{left:50px;animation:sidle 1s ease-in-out infinite;}
+#spr-enemy{right:40px;animation:eidle 1.3s ease-in-out infinite;}
+@keyframes sidle{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes eidle{0%,100%{transform:translateY(0) scaleX(-1)}50%{transform:translateY(-7px) scaleX(-1)}}
+.spr-attack{animation:atkanim .5s ease forwards!important;}
+@keyframes atkanim{0%{transform:translateX(0)}40%{transform:translateX(70px) scaleX(1.2)}80%{transform:translateX(30px)}100%{transform:translateX(0)}}
+.spr-hurt{animation:hurtspr .4s ease!important;}
+@keyframes hurtspr{0%,100%{filter:drop-shadow(0 6px 2px rgba(0,0,0,.6))}50%{filter:drop-shadow(0 0 20px #ff0000) brightness(5);transform:translateX(-12px)}}
+.enemy-hurt{animation:ehurt .4s ease!important;}
+@keyframes ehurt{0%,100%{filter:drop-shadow(0 6px 2px rgba(0,0,0,.6)) scaleX(-1)}50%{filter:drop-shadow(0 0 30px white) brightness(8);transform:scaleX(-1.2)}}
+.dmgnum{position:absolute;pointer-events:none;font-size:16px;font-weight:900;
+  animation:dmgfloat 1.1s ease-out forwards;z-index:30;text-shadow:0 2px 4px #000;}
+@keyframes dmgfloat{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-65px);opacity:0}}
+.battle-log{position:absolute;bottom:0;left:0;right:0;height:68px;
+  background:rgba(0,0,10,.88);border-top:2px solid var(--border);padding:6px 8px;overflow:hidden;}
+.blog{font-family:'VT323',monospace;font-size:17px;line-height:1.45;}
+.blog span{display:block;animation:logfade .3s ease;}
+@keyframes logfade{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+
+/* ENEMY TIMER (counterattack bar) */
+.enemy-timer-wrap{position:absolute;top:8px;right:8px;width:120px;background:rgba(0,0,0,.7);
+  border:1px solid var(--red);padding:4px 6px;font-size:5px;color:var(--red);}
+.etbar{height:5px;background:#500;margin-top:3px;}
+.etfill{height:100%;background:var(--red);transition:width .1s linear;}
+
+/* MONSTER INFO CARD */
+.mcard{background:var(--panel);border:2px solid var(--border);padding:8px;
+  display:flex;gap:10px;align-items:center;}
+.mcard-icon{font-size:38px;line-height:1;}
+.mcard-info{flex:1;font-size:6px;line-height:2.1;}
+.mcard-name{font-size:8px;color:var(--red);display:block;margin-bottom:2px;}
+.mcard-weak{color:var(--purple);font-size:6px;}
+
+/* CHALLENGE BOX */
+.challenge-box{background:var(--panel2);border:2px solid var(--purple);padding:12px;display:none;
+  box-shadow:0 0 24px rgba(204,68,255,.2);}
+.cbox-header{font-size:7px;color:var(--purple);text-align:center;margin-bottom:10px;}
+.cbox-context{background:#08080e;border:2px solid var(--blue);padding:10px;
+  font-family:'VT323',monospace;font-size:20px;color:var(--white);line-height:1.6;margin-bottom:8px;}
+.cbox-context .ctag{font-size:12px;color:#888;display:block;margin-top:4px;}
+.cbox-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;}
+.opt-btn{font-family:'VT323',monospace;font-size:20px;background:var(--panel);
+  border:2px solid var(--border);color:var(--white);padding:9px;cursor:pointer;text-align:center;
+  transition:all .1s;}
+.opt-btn:hover:not(:disabled){background:var(--panel2);border-color:var(--blue);color:var(--blue);}
+.opt-btn.correct{background:#0a2a10;border-color:var(--green);color:var(--green)!important;
+  animation:flashc .5s ease;}
+.opt-btn.wrong{background:#2a0808;border-color:var(--red);color:var(--red)!important;
+  animation:shaker .4s ease;}
+@keyframes flashc{50%{background:#1a4a20;box-shadow:0 0 18px rgba(58,255,136,.5)}}
+@keyframes shaker{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.cbox-timerwrap{display:flex;align-items:center;gap:8px;font-size:6px;color:#888;}
+.cbox-timerbar{flex:1;height:5px;background:#222;border:1px solid #444;}
+.cbox-timerfill{height:100%;background:var(--green);transition:width .1s linear;}
+
+/* EPIC INPUT */
+.epic-input-wrap{display:none;flex-direction:column;gap:8px;}
+.epic-prompt{background:#08080e;border:2px solid var(--orange);padding:10px;
+  font-family:'VT323',monospace;font-size:20px;color:var(--white);line-height:1.6;}
+.epic-prompt .ctag{font-size:12px;color:#888;display:block;margin-top:4px;}
+.epic-input{font-family:'Press Start 2P',monospace;font-size:12px;background:var(--panel);
+  border:2px solid var(--gold);color:var(--gold);padding:10px;width:100%;outline:none;}
+.epic-input:focus{border-color:var(--orange);box-shadow:0 0 12px rgba(255,140,58,.4);}
+.epic-submit{font-family:'Press Start 2P',monospace;font-size:9px;
+  background:linear-gradient(180deg,var(--orange),#aa5500);color:#fff;border:2px solid #ffaa55;
+  padding:10px 20px;cursor:pointer;align-self:flex-end;}
+.epic-hint{font-size:6px;color:#888;}
+
+/* ACTION BAR */
+.action-bar{background:var(--panel);border:2px solid var(--border);padding:8px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.act-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:9px 4px;cursor:pointer;
+  border:2px solid;text-align:center;line-height:1.8;transition:all .1s;}
+.act-btn:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.3);}
+.act-btn:active:not(:disabled){transform:translateY(1px);}
+.act-btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.act-btn .abicon{font-size:22px;display:block;margin-bottom:3px;}
+.act-btn .abcost{font-size:5px;color:#888;display:block;margin-top:3px;}
+.abt-atk{background:var(--darkred);border-color:var(--red);color:#ff9999;}
+.abt-magic{background:var(--darkblue);border-color:var(--blue);color:#99bbff;}
+.abt-epic{background:#1a0030;border-color:var(--purple);color:#dd99ff;}
+.abt-heal{background:var(--darkgreen);border-color:var(--green);color:#99ffbb;}
+.act-btn .timer-lbl{font-size:5px;color:#666;display:block;}
+
+/* OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,8,.92);z-index:500;
+  align-items:center;justify-content:center;flex-direction:column;}
+.overlay.show{display:flex;}
+.obox{background:var(--panel2);border:3px solid var(--gold);padding:28px;text-align:center;
+  max-width:480px;width:90%;animation:popin .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popin{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.obox.red{border-color:var(--red);}
+.obox.purple{border-color:var(--purple);}
+.otitle{font-size:18px;color:var(--gold);margin-bottom:14px;animation:glow 1.5s infinite alternate;}
+.obox.red .otitle{color:var(--red);}
+.obox.purple .otitle{color:var(--purple);}
+.otext{font-family:'VT323',monospace;font-size:20px;line-height:1.7;margin-bottom:18px;white-space:pre-wrap;}
+.obig-icon{font-size:56px;margin:8px 0;}
+.obtn{font-family:'Press Start 2P',monospace;font-size:9px;background:var(--gold);color:#000;
+  border:none;padding:11px 22px;cursor:pointer;margin:4px;}
+.obtn:hover{filter:brightness(1.15);}
+.obtn.red{background:var(--red);color:#fff;}
+.obtn.blue{background:var(--blue);color:#fff;}
+.obtn.purple{background:var(--purple);color:#fff;}
+
+/* UPGRADE overlay */
+.upgrade-grid{display:grid;grid-template-columns:1fr;gap:10px;width:100%;margin:12px 0;}
+.upg-btn{font-family:'Press Start 2P',monospace;font-size:7px;background:var(--panel);
+  border:2px solid var(--border);color:var(--white);padding:12px;cursor:pointer;text-align:left;
+  line-height:1.9;transition:all .15s;}
+.upg-btn:hover{border-color:var(--gold);background:var(--panel2);color:var(--gold);}
+.upg-btn .upg-icon{font-size:22px;display:inline-block;margin-right:6px;vertical-align:middle;}
+.upg-btn .upg-desc{font-size:5px;color:#888;display:block;margin-top:4px;}
+
+/* MAP NODE hover tooltip */
+.map-tooltip{position:fixed;background:var(--panel2);border:2px solid var(--border);
+  padding:8px 10px;font-size:6px;pointer-events:none;z-index:200;display:none;max-width:180px;line-height:1.9;}
+.map-tooltip .tt-name{color:var(--red);font-size:7px;display:block;margin-bottom:3px;}
+.map-tooltip .tt-diff{margin-top:3px;}
+
+/* Responsive */
+@media(max-width:560px){
+  .hud{grid-template-columns:1fr 1fr;}
+  .hmid{display:none;}
+  .action-bar{grid-template-columns:1fr 1fr;}
+  .cbox-options{grid-template-columns:1fr;}
+  #spr-player{font-size:44px;left:20px;}
+  #spr-enemy{font-size:52px;right:10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- STARS (generated by JS) -->
+<div id="stars" style="position:fixed;inset:0;pointer-events:none;z-index:0;"></div>
+
+<!-- ═══════════════════════════ TITLE ═══════════════════════════ -->
+<div id="scr-title" class="screen active">
+  <div class="title-logo">⚔️ MONSTRUOS<br>VERBALES ⚔️</div>
+  <div class="parade">🧟 🐉 👺 🦇 💀 👾</div>
+  <div class="title-desc">
+    CONJUGA VERBOS · DERROTA MONSTRUOS · CONQUISTA EL MAPA<br>
+    Tiempos verbales de 5to grado · Primaria Argentina<br>
+    ¡Responde correctamente y aplasta al enemigo!
+  </div>
+  <button class="big-btn" onclick="G.startGame()">▶ COMENZAR AVENTURA</button>
+  <div style="font-size:6px;color:#555;margin-top:14px;line-height:2.2;">
+    ⚔️ ATAQUE BÁSICO = 30 segundos &nbsp;|&nbsp; ✨ CONJURO = 20 seg &nbsp;|&nbsp; 💥 GOLPE ÉPICO = escribí la respuesta
+  </div>
+</div>
+
+<!-- ═══════════════════════════ MAP ═══════════════════════════ -->
+<div id="scr-map" class="screen">
+  <div class="map-topbar">
+    <div class="map-title-txt">🗺️ MAPA DEL REINO VERBAL</div>
+    <div class="map-player-stats" id="map-stats">❤️ HP: — &nbsp;|&nbsp; 💎 MP: — &nbsp;|&nbsp; ⭐ NVL: — &nbsp;|&nbsp; 🏆 Pts: —</div>
+  </div>
+  <div id="map-wrap"><canvas id="mapCanvas" width="820" height="520"></canvas></div>
+  <div class="map-legend">
+    <div class="leg"><span style="color:#aaa">⬜</span> Sin explorar</div>
+    <div class="leg"><span style="color:var(--green)">✅</span> Derrotado</div>
+    <div class="leg"><span style="color:var(--gold)">📍</span> Disponible</div>
+    <div class="leg"><span style="color:var(--red)">💀</span> Jefe</div>
+    <div class="leg"><span style="color:#888">🔒</span> Bloqueado</div>
+    <div class="leg" style="margin-left:auto;color:var(--gold)">Toca un nodo disponible para combatir</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ BATTLE ═══════════════════════════ -->
+<div id="scr-battle" class="screen">
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hside">
+      <div style="color:var(--green);font-size:7px;margin-bottom:4px;">⚔️ HÉROE VERBAL</div>
+      <div class="barlbl">❤️ HP: <span id="php">100</span>/<span id="pmhp">100</span></div>
+      <div class="bar" style="width:150px;max-width:100%;"><div class="barfill bhp-p" id="bphp" style="width:100%"></div></div>
+      <div class="barlbl" style="margin-top:4px;">💎 MP: <span id="pmp">30</span>/<span id="pmmp">30</span></div>
+      <div class="bar" style="width:150px;max-width:100%;"><div class="barfill bmp" id="bpmp" style="width:100%"></div></div>
+      <div class="barlbl" style="margin-top:4px;color:var(--gold);">EXP</div>
+      <div class="bar" style="width:150px;max-width:100%;height:5px;"><div class="barfill bexp" id="bexp" style="width:0%"></div></div>
+    </div>
+    <div class="hmid">
+      <div class="lvlbadge">NVL <span id="plvl">1</span></div>
+      <div style="font-size:22px;margin:4px 0;">⚔️</div>
+      <div class="scoreval" id="score-val">0</div>
+      <div style="font-size:5px;color:#888;">PUNTOS</div>
+    </div>
+    <div class="hside right">
+      <div style="color:var(--red);font-size:7px;margin-bottom:4px;" id="ename-hud">👾 ENEMIGO</div>
+      <div class="barlbl">❤️ HP: <span id="ehp">0</span>/<span id="emhp">0</span></div>
+      <div class="bar" style="width:150px;max-width:100%;margin-left:auto;"><div class="barfill bhp-e" id="behp" style="width:100%"></div></div>
+      <div style="font-size:5px;color:#888;margin-top:6px;" id="eweakhud">⚡ Debilidad: —</div>
+      <button style="font-family:'Press Start 2P',monospace;font-size:6px;background:var(--panel);border:1px solid var(--border);color:#888;padding:4px 8px;cursor:pointer;margin-top:8px;" onclick="G.goMap()">🗺️ MAPA</button>
+    </div>
+  </div>
+
+  <!-- STREAK -->
+  <div class="streak-hud">
+    <span id="fire-icon" class="fireicon" style="display:none">🔥</span>
+    <span style="color:#888;">RACHA:</span>
+    <span id="streak-val" style="color:var(--gold);">0</span>
+    <span id="streak-bonus" style="color:var(--orange);font-size:6px;"></span>
+    <span style="margin-left:auto;font-size:6px;color:#666;" id="turn-info">Tu turno</span>
+  </div>
+
+  <!-- ARENA -->
+  <div class="arena" id="arena">
+    <div class="arena-ground"></div>
+    <div class="sprite" id="spr-player">🧙</div>
+    <div class="sprite" id="spr-enemy">👾</div>
+    <!-- enemy countdown -->
+    <div class="enemy-timer-wrap" id="etimer-wrap" style="display:none;">
+      <div style="font-size:5px;color:var(--red);">⚡ CONTRAATAQUE EN: <span id="et-secs">5</span>s</div>
+      <div class="etbar"><div class="etfill" id="etfill" style="width:100%"></div></div>
+    </div>
+    <div class="battle-log"><div class="blog" id="blog"></div></div>
+  </div>
+
+  <!-- MONSTER CARD -->
+  <div class="mcard" id="mcard">
+    <div class="mcard-icon" id="mc-icon">👾</div>
+    <div class="mcard-info">
+      <span class="mcard-name" id="mc-name">???</span>
+      <span id="mc-desc" style="color:#888;"></span>
+      <span class="mcard-weak" id="mc-weak">⚡ Debilidad: ???</span>
+    </div>
+  </div>
+
+  <!-- CHALLENGE (multiple choice) -->
+  <div class="challenge-box" id="challenge-box">
+    <div class="cbox-header" id="cbox-header">⚡ ¡DESAFÍO VERBAL!</div>
+    <div class="cbox-context">
+      <span id="ctx-sentence"></span>
+      <span class="ctag" id="ctx-tag"></span>
+    </div>
+    <div class="cbox-options" id="cbox-options"></div>
+    <div class="cbox-timerwrap">
+      <span id="ctimer-secs">30</span>s
+      <div class="cbox-timerbar"><div class="cbox-timerfill" id="ctimerfill" style="width:100%"></div></div>
+      <span id="ctimer-label" style="font-size:5px;">Tiempo restante</span>
+    </div>
+  </div>
+
+  <!-- EPIC INPUT (type answer) -->
+  <div class="epic-input-wrap" id="epic-wrap">
+    <div class="cbox-header" style="display:block;font-size:7px;color:var(--purple);text-align:center;">
+      💥 GOLPE ÉPICO — ¡Escribí la conjugación correcta!
+    </div>
+    <div class="epic-prompt">
+      <span id="epic-sentence"></span>
+      <span class="ctag" id="epic-tag"></span>
+    </div>
+    <div class="epic-hint" id="epic-hint"></div>
+    <input class="epic-input" id="epic-input" type="text" placeholder="Escribí aquí tu respuesta..." autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="epic-submit" onclick="G.submitEpic()">💥 ¡GOLPEAR!</button>
+  </div>
+
+  <!-- ACTION BAR -->
+  <div class="action-bar" id="action-bar">
+    <button class="act-btn abt-atk" id="btn-atk" onclick="G.doAction('atk')">
+      <span class="abicon">⚔️</span>ATAQUE<br>BÁSICO
+      <span class="abcost">Sin MP</span>
+      <span class="timer-lbl">⏱ <span id="lbl-atk">30</span>s</span>
+    </button>
+    <button class="act-btn abt-magic" id="btn-magic" onclick="G.doAction('magic')">
+      <span class="abicon">✨</span>CONJURO<br>MÁGICO
+      <span class="abcost">10 MP</span>
+      <span class="timer-lbl">⏱ <span id="lbl-magic">20</span>s</span>
+    </button>
+    <button class="act-btn abt-epic" id="btn-epic" onclick="G.doAction('epic')">
+      <span class="abicon">💥</span>GOLPE<br>ÉPICO
+      <span class="abcost">20 MP</span>
+      <span class="timer-lbl">✍️ Escribir</span>
+    </button>
+    <button class="act-btn abt-heal" id="btn-heal" onclick="G.doAction('heal')">
+      <span class="abicon">💊</span>CURAR<br>HP
+      <span class="abcost">15 MP</span>
+      <span class="timer-lbl">⏱ <span id="lbl-heal">15</span>s</span>
+    </button>
+  </div>
+
+</div><!-- /scr-battle -->
+
+<!-- ─── OVERLAYS ─── -->
+<!-- Win -->
+<div class="overlay" id="ov-win">
+  <div class="obox">
+    <div class="otitle">🏆 ¡VICTORIA!</div>
+    <div class="obig-icon" id="ov-win-icon">🏆</div>
+    <div class="otext" id="ov-win-text"></div>
+    <button class="obtn" onclick="G.afterWin()">▶ Elegir mejora</button>
+  </div>
+</div>
+
+<!-- Game Over -->
+<div class="overlay" id="ov-gameover">
+  <div class="obox red">
+    <div class="otitle">💀 DERROTA...</div>
+    <div class="obig-icon">💔</div>
+    <div class="otext" id="ov-go-text"></div>
+    <button class="obtn red" onclick="G.goMap()">🗺️ Volver al mapa</button>
+    <button class="obtn" onclick="G.retryBattle()">🔄 Reintentar</button>
+  </div>
+</div>
+
+<!-- Upgrade chooser -->
+<div class="overlay" id="ov-upgrade">
+  <div class="obox purple">
+    <div class="otitle">⬆️ ¡MEJORA!</div>
+    <div class="otext" id="ov-upg-text">Elegí una mejora para tu héroe:</div>
+    <div class="upgrade-grid" id="upg-grid"></div>
+  </div>
+</div>
+
+<!-- Final Win -->
+<div class="overlay" id="ov-final">
+  <div class="obox">
+    <div class="otitle" style="color:var(--gold);font-size:14px;">🌟 ¡REINO LIBERADO! 🌟</div>
+    <div class="obig-icon">👑</div>
+    <div class="otext" id="ov-final-text"></div>
+    <button class="obtn" onclick="location.reload()">🔄 Nueva partida</button>
+  </div>
+</div>
+
+<!-- Map tooltip -->
+<div class="map-tooltip" id="map-tooltip">
+  <span class="tt-name" id="tt-name"></span>
+  <span id="tt-icon" style="font-size:24px;"></span>
+  <div id="tt-stats"></div>
+  <div class="tt-diff" id="tt-diff"></div>
+  <div id="tt-weak" style="color:var(--purple);font-size:5px;margin-top:2px;"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════
+
+// Tiempos verbales: 5to grado Argentina
+// Presente, Pretérito Perfecto Simple (indefinido), Pretérito Imperfecto, Futuro Simple, Condicional simple
+
+const CHALLENGES = {
+// ──── PRESENTE ────
+presente:[
+  {
+    sentence:"El héroe ___ con valentía hacia el castillo.",
+    blank:"camina",
+    infinitive:"CAMINAR",
+    tiempo:"Presente de indicativo",
+    persona:"3ª persona singular (él/ella)",
+    wrong:["caminó","caminará","caminaba","caminar"],
+    epic_sentence:"El héroe ___ con valentía hacia el castillo. (CAMINAR, presente, él)",
+    epic_hint:"Pista: quitar -AR y agregar -a"
+  },
+  {
+    sentence:"Nosotros ___ nuestras espadas antes de la batalla.",
+    blank:"afilamos",
+    infinitive:"AFILAR",
+    tiempo:"Presente de indicativo",
+    persona:"1ª persona plural (nosotros)",
+    wrong:["afilamos","afilaron","afilaremos","afilábamos"],
+    // nota: wrong[0] igual a blank → se filtra en código
+    epic_sentence:"Nosotros ___ las espadas. (AFILAR, presente, nosotros)",
+    epic_hint:"Pista: quitar -AR y agregar -amos"
+  },
+  {
+    sentence:"Tú ___ el conjuro más poderoso del reino.",
+    blank:"conoces",
+    infinitive:"CONOCER",
+    tiempo:"Presente de indicativo",
+    persona:"2ª persona singular (tú)",
+    wrong:["conociste","conocerás","conocías","conocía"],
+    epic_sentence:"Tú ___ el conjuro. (CONOCER, presente, tú)",
+    epic_hint:"Pista: quitar -ER y agregar -es"
+  },
+  {
+    sentence:"Los guerreros ___ listos para enfrentarse al dragón.",
+    blank:"están",
+    infinitive:"ESTAR",
+    tiempo:"Presente de indicativo",
+    persona:"3ª persona plural (ellos)",
+    wrong:["estuvieron","estarán","estaban","estén"],
+    epic_sentence:"Los guerreros ___ listos. (ESTAR, presente, ellos)",
+    epic_hint:"Verbo irregular: est___"
+  },
+  {
+    sentence:"Yo ___ mucha fuerza para vencer al monstruo.",
+    blank:"tengo",
+    infinitive:"TENER",
+    tiempo:"Presente de indicativo",
+    persona:"1ª persona singular (yo)",
+    wrong:["tuve","tendré","tenía","tenga"],
+    epic_sentence:"Yo ___ mucha fuerza. (TENER, presente, yo)",
+    epic_hint:"Verbo irregular: t___go"
+  },
+  {
+    sentence:"Vosotros ___ el camino hacia la cueva oscura.",
+    blank:"seguís",
+    infinitive:"SEGUIR",
+    tiempo:"Presente de indicativo",
+    persona:"2ª persona plural (vosotros/ustedes)",
+    wrong:["siguieron","seguirán","seguían","sigan"],
+    epic_sentence:"Ustedes ___ el camino. (SEGUIR, presente, ustedes)",
+    epic_hint:"Quitar -IR, raíz sigue → sigu+en"
+  }
+],
+
+// ──── PRETÉRITO PERFECTO SIMPLE (INDEFINIDO) ────
+indefinido:[
+  {
+    sentence:"Ayer el héroe ___ al terrible ogro del pantano.",
+    blank:"venció",
+    infinitive:"VENCER",
+    tiempo:"Pretérito perfecto simple",
+    persona:"3ª persona singular (él/ella)",
+    wrong:["vence","vencerá","vencía","venza"],
+    epic_sentence:"Ayer el héroe ___ al ogro. (VENCER, pasado perfecto simple, él)",
+    epic_hint:"Pista: quitar -ER y agregar -ió"
+  },
+  {
+    sentence:"La semana pasada nosotros ___ el mapa del tesoro.",
+    blank:"encontramos",
+    infinitive:"ENCONTRAR",
+    tiempo:"Pretérito perfecto simple",
+    persona:"1ª persona plural (nosotros)",
+    wrong:["encontramos","encontraremos","encontrábamos","encontremos"],
+    epic_sentence:"La semana pasada nosotros ___ el mapa. (ENCONTRAR, p.p. simple, nosotros)",
+    epic_hint:"Pista: quitar -AR y agregar -amos (igual al presente, ¡ojo!)"
+  },
+  {
+    sentence:"Los monstruos ___ del reino en una sola noche.",
+    blank:"huyeron",
+    infinitive:"HUIR",
+    tiempo:"Pretérito perfecto simple",
+    persona:"3ª persona plural (ellos)",
+    wrong:["huyen","huirán","huían","huyan"],
+    epic_sentence:"Los monstruos ___ del reino. (HUIR, p.p. simple, ellos)",
+    epic_hint:"Irregular: hu+y+eron"
+  },
+  {
+    sentence:"Yo ___ la espada mágica en las profundidades del lago.",
+    blank:"encontré",
+    infinitive:"ENCONTRAR",
+    tiempo:"Pretérito perfecto simple",
+    persona:"1ª persona singular (yo)",
+    wrong:["encuentro","encontraré","encontraba","encuentre"],
+    epic_sentence:"Yo ___ la espada mágica. (ENCONTRAR, p.p. simple, yo)",
+    epic_hint:"Pista: quitar -AR y agregar -é"
+  },
+  {
+    sentence:"Tú ___ el secreto del mago oscuro sin querer.",
+    blank:"descubriste",
+    infinitive:"DESCUBRIR",
+    tiempo:"Pretérito perfecto simple",
+    persona:"2ª persona singular (tú)",
+    wrong:["descubres","descubrirás","descubrías","descubras"],
+    epic_sentence:"Tú ___ el secreto. (DESCUBRIR, p.p. simple, tú)",
+    epic_hint:"Pista: quitar -IR y agregar -iste"
+  }
+],
+
+// ──── PRETÉRITO IMPERFECTO ────
+imperfecto:[
+  {
+    sentence:"Cuando era pequeño, el héroe ___ monstruos en sus sueños.",
+    blank:"veía",
+    infinitive:"VER",
+    tiempo:"Pretérito imperfecto",
+    persona:"3ª persona singular (él/ella)",
+    wrong:["vio","verá","ve","vea"],
+    epic_sentence:"De niño, el héroe ___ monstruos en sus sueños. (VER, imperfecto, él)",
+    epic_hint:"Pista: ve+ía"
+  },
+  {
+    sentence:"Antes, los guerreros ___ en el gran salón del castillo.",
+    blank:"vivían",
+    infinitive:"VIVIR",
+    tiempo:"Pretérito imperfecto",
+    persona:"3ª persona plural (ellos)",
+    wrong:["vivieron","vivirán","viven","vivan"],
+    epic_sentence:"Antes los guerreros ___ en el castillo. (VIVIR, imperfecto, ellos)",
+    epic_hint:"Pista: quitar -IR y agregar -ían"
+  },
+  {
+    sentence:"Yo siempre ___ a mis amigos cuando los monstruos atacaban.",
+    blank:"protegía",
+    infinitive:"PROTEGER",
+    tiempo:"Pretérito imperfecto",
+    persona:"1ª persona singular (yo)",
+    wrong:["protegí","protegeré","protejo","proteja"],
+    epic_sentence:"Yo siempre ___ a mis amigos. (PROTEGER, imperfecto, yo)",
+    epic_hint:"Pista: quitar -ER y agregar -ía"
+  },
+  {
+    sentence:"Tú nunca ___ miedo aunque los dragones rugieran fuerte.",
+    blank:"tenías",
+    infinitive:"TENER",
+    tiempo:"Pretérito imperfecto",
+    persona:"2ª persona singular (tú)",
+    wrong:["tuviste","tendrás","tienes","tengas"],
+    epic_sentence:"Tú nunca ___ miedo. (TENER, imperfecto, tú)",
+    epic_hint:"Pista: ten+ías"
+  },
+  {
+    sentence:"Nosotros ___ cada noche para enfrentar a las criaturas.",
+    blank:"entrenábamos",
+    infinitive:"ENTRENAR",
+    tiempo:"Pretérito imperfecto",
+    persona:"1ª persona plural (nosotros)",
+    wrong:["entrenamos","entrenaremos","entrenemos","entrenaron"],
+    epic_sentence:"Nosotros ___ cada noche. (ENTRENAR, imperfecto, nosotros)",
+    epic_hint:"Pista: quitar -AR y agregar -ábamos"
+  }
+],
+
+// ──── FUTURO SIMPLE ────
+futuro:[
+  {
+    sentence:"Mañana el héroe ___ al gran dragón del volcán.",
+    blank:"derrotará",
+    infinitive:"DERROTAR",
+    tiempo:"Futuro simple",
+    persona:"3ª persona singular (él/ella)",
+    wrong:["derrotó","derrota","derrotaba","derrote"],
+    epic_sentence:"Mañana el héroe ___ al dragón. (DERROTAR, futuro, él)",
+    epic_hint:"Pista: infinitivo + á → derrotar+á"
+  },
+  {
+    sentence:"Yo ___ el conjuro más poderoso cuando llegue el momento.",
+    blank:"lanzaré",
+    infinitive:"LANZAR",
+    tiempo:"Futuro simple",
+    persona:"1ª persona singular (yo)",
+    wrong:["lancé","lanzo","lanzaba","lance"],
+    epic_sentence:"Yo ___ el conjuro. (LANZAR, futuro, yo)",
+    epic_hint:"Pista: infinitivo + é → lanzar+é"
+  },
+  {
+    sentence:"Nosotros ___ el castillo del rey oscuro pronto.",
+    blank:"conquistaremos",
+    infinitive:"CONQUISTAR",
+    tiempo:"Futuro simple",
+    persona:"1ª persona plural (nosotros)",
+    wrong:["conquistamos","conquistamos","conquistábamos","conquistemos"],
+    epic_sentence:"Nosotros ___ el castillo. (CONQUISTAR, futuro, nosotros)",
+    epic_hint:"Pista: infinitivo + emos → conquistar+emos"
+  },
+  {
+    sentence:"Los elfos ___ con nosotros en la batalla final.",
+    blank:"lucharán",
+    infinitive:"LUCHAR",
+    tiempo:"Futuro simple",
+    persona:"3ª persona plural (ellos)",
+    wrong:["lucharon","luchan","luchaban","luchen"],
+    epic_sentence:"Los elfos ___ con nosotros. (LUCHAR, futuro, ellos)",
+    epic_hint:"Pista: infinitivo + án → luchar+án"
+  },
+  {
+    sentence:"Tú ___ el héroe legendario que todos esperaban.",
+    blank:"serás",
+    infinitive:"SER",
+    tiempo:"Futuro simple",
+    persona:"2ª persona singular (tú)",
+    wrong:["eres","fuiste","eras","seas"],
+    epic_sentence:"Tú ___ el héroe legendario. (SER, futuro, tú)",
+    epic_hint:"Irregular: ser+ás"
+  }
+],
+
+// ──── CONDICIONAL ────
+condicional:[
+  {
+    sentence:"Si tuvieras más fuerza, ___ vencer al dragón sin problemas.",
+    blank:"podrías",
+    infinitive:"PODER",
+    tiempo:"Condicional simple",
+    persona:"2ª persona singular (tú)",
+    wrong:["puedes","pudiste","podrás","puedas"],
+    epic_sentence:"Si tuvieras fuerza, ___ vencer. (PODER, condicional, tú)",
+    epic_hint:"Pista: infinitivo + ías → poder+ías"
+  },
+  {
+    sentence:"Con el mapa correcto, nosotros ___ encontrar el tesoro.",
+    blank:"podríamos",
+    infinitive:"PODER",
+    tiempo:"Condicional simple",
+    persona:"1ª persona plural (nosotros)",
+    wrong:["pudimos","podemos","podremos","podamos"],
+    epic_sentence:"Con el mapa, nosotros ___ encontrar el tesoro. (PODER, condicional, nosotros)",
+    epic_hint:"Pista: poder+íamos"
+  },
+  {
+    sentence:"El mago ___ curar todas las heridas si aprendiera el hechizo.",
+    blank:"podría",
+    infinitive:"PODER",
+    tiempo:"Condicional simple",
+    persona:"3ª persona singular (él/ella)",
+    wrong:["puede","pudo","podrá","pueda"],
+    epic_sentence:"El mago ___ curar heridas. (PODER, condicional, él)",
+    epic_hint:"Pista: poder+ía"
+  }
+]
+};
+
+// Todos los desafíos combinados
+const ALL_CHALLENGES = [
+  ...CHALLENGES.presente,
+  ...CHALLENGES.indefinido,
+  ...CHALLENGES.imperfecto,
+  ...CHALLENGES.futuro,
+  ...CHALLENGES.condicional
+];
+
+// Desafíos épicos (más difíciles, doble verbo)
+const EPIC_CHALLENGES = [
+  {
+    sentence:"El caballero ___ (CORRER, presente, él) mientras el monstruo ___ (RUGIR, imperfecto, él).",
+    blank1:"corre", label1:"CORRER (presente, él)",
+    blank2:"rugía", label2:"RUGIR (imperfecto, él)",
+    ask:"primera",
+    epic_sentence:"El caballero ___ mientras el monstruo rugía. ¿Qué va en el primer espacio?",
+    epic_hint:"CORRER, presente, él → corre",
+    answer:"corre"
+  },
+  {
+    sentence:"Cuando el dragón ___ (VOLAR, imperfecto, él), los aldeanos ___ (HUIR, indefinido, ellos).",
+    blank1:"volaba", blank2:"huyeron",
+    epic_sentence:"Cuando el dragón ___ los aldeanos se fueron. (VOLAR, imperfecto, él)",
+    epic_hint:"VOLAR, imperfecto, él → vol+aba",
+    answer:"volaba"
+  },
+  {
+    sentence:"Mañana nosotros ___ (PARTIR, futuro) y el enemigo ___ (TEMER, futuro, él).",
+    blank1:"partiremos", blank2:"temerá",
+    epic_sentence:"Mañana nosotros ___ hacia el castillo. (PARTIR, futuro, nosotros)",
+    epic_hint:"PARTIR + emos = partiremos",
+    answer:"partiremos"
+  },
+  {
+    sentence:"Ayer yo ___ (ENCONTRAR, indef.) el escudo que mi maestro me ___ (DAR, indef., él).",
+    blank1:"encontré", blank2:"dio",
+    epic_sentence:"Ayer yo ___ el escudo mágico. (ENCONTRAR, p.p. simple, yo)",
+    epic_hint:"ENCONTRAR + é = encontré",
+    answer:"encontré"
+  },
+  {
+    sentence:"Si el héroe ___ (ENTRENAR, condicional) más, ___ (PODER, condicional) derrotar al boss.",
+    blank1:"entrenara", blank2:"podría",
+    epic_sentence:"Si el héroe ___ más, ganaría. (ENTRENAR, condicional, él)",
+    epic_hint:"entrenar+ía = entrenaría",
+    answer:"entrenaría"
+  },
+  {
+    sentence:"Los guerreros ___ (CAMINAR, imperfecto) cuando de repente ___ (APARECER, indef., él) el ogro.",
+    blank1:"caminaban", blank2:"apareció",
+    epic_sentence:"Los guerreros ___ por el bosque. (CAMINAR, imperfecto, ellos)",
+    epic_hint:"caminar → camina + ban = caminaban",
+    answer:"caminaban"
+  },
+  {
+    sentence:"Tú siempre ___ (CREER, imperfecto) en mí, y hoy yo te ___ (DEMOSTRAR, futuro) que tenías razón.",
+    blank1:"creías", blank2:"demostraré",
+    epic_sentence:"Tú siempre ___ en mí. (CREER, imperfecto, tú)",
+    epic_hint:"creer → cre + ías = creías",
+    answer:"creías"
+  },
+  {
+    sentence:"Cuando era joven, el brujo ___ (VIVIR, imperfecto) en la torre y ___ (ESTUDIAR, imperfecto) magia.",
+    blank1:"vivía", blank2:"estudiaba",
+    epic_sentence:"El brujo ___ en la torre oscura. (VIVIR, imperfecto, él)",
+    epic_hint:"vivir → viv + ía = vivía",
+    answer:"vivía"
+  }
+];
+
+// ═══════════════════════════════════════════════════════════
+//  MONSTRUOS (32 total)
+// ═══════════════════════════════════════════════════════════
+
+const MONSTERS = [
+// Zona 1: Bosque Muerto (fácil)
+{id:0,name:"Zombi Lento",icon:"🧟",hp:50,atk:6,reward:80,weak:"Presente",zone:"Bosque Muerto",diff:1,
+  desc:"Un zombi que gruñe sólo en presente.",challengePool:"presente"},
+{id:1,name:"Murciélago Chillón",icon:"🦇",hp:45,atk:7,reward:75,weak:"Presente",zone:"Bosque Muerto",diff:1,
+  desc:"Le aterra el presente de indicativo.",challengePool:"presente"},
+{id:2,name:"Araña Tejedora",icon:"🕷️",hp:55,atk:5,reward:85,weak:"Presente",zone:"Bosque Muerto",diff:1,
+  desc:"Teje sus trampas en tiempo presente.",challengePool:"presente"},
+{id:3,name:"Rata Gigante",icon:"🐀",hp:40,atk:8,reward:70,weak:"Presente",zone:"Bosque Muerto",diff:1,
+  desc:"Rápida pero vulnerable al presente.",challengePool:"presente"},
+
+// Zona 2: Pantano Oscuro (fácil-medio)
+{id:4,name:"Fantasma Llorón",icon:"👻",hp:60,atk:8,reward:100,weak:"Imperfecto",zone:"Pantano Oscuro",diff:2,
+  desc:"Llora porque no recuerda el imperfecto.",challengePool:"imperfecto"},
+{id:5,name:"Goblin Ladrón",icon:"👺",hp:65,atk:9,reward:110,weak:"Imperfecto",zone:"Pantano Oscuro",diff:2,
+  desc:"Roba palabras del pasado imperfecto.",challengePool:"imperfecto"},
+{id:6,name:"Esqueleto Guerrero",icon:"💀",hp:70,atk:10,reward:120,weak:"Indefinido",zone:"Pantano Oscuro",diff:2,
+  desc:"Sólo puede ser detenido por el indefinido.",challengePool:"indefinido"},
+{id:7,name:"Sapo Venenoso",icon:"🐸",hp:58,atk:9,reward:105,weak:"Imperfecto",zone:"Pantano Oscuro",diff:2,
+  desc:"Su veneno debilita el imperfecto.",challengePool:"imperfecto"},
+
+// Zona 3: Cueva de Cristal (medio)
+{id:8,name:"Troll Rompepiedras",icon:"🧌",hp:85,atk:12,reward:140,weak:"Indefinido",zone:"Cueva de Cristal",diff:2,
+  desc:"Sus golpes pasados te persiguen.",challengePool:"indefinido"},
+{id:9,name:"Slime Azul",icon:"🫧",hp:75,atk:10,reward:130,weak:"Presente",zone:"Cueva de Cristal",diff:2,
+  desc:"Se divide si no lo atacas en presente.",challengePool:"presente"},
+{id:10,name:"Gárgola de Piedra",icon:"🪨",hp:90,atk:11,reward:150,weak:"Indefinido",zone:"Cueva de Cristal",diff:2,
+  desc:"Sólo el pasado simple la destruye.",challengePool:"indefinido"},
+{id:11,name:"Hada Oscura",icon:"🧚",hp:65,atk:13,reward:135,weak:"Futuro",zone:"Cueva de Cristal",diff:3,
+  desc:"Teme las palabras del futuro simple.",challengePool:"futuro"},
+
+// Zona 4: Torre del Brujo (medio-difícil)
+{id:12,name:"Golem de Fuego",icon:"🔥",hp:100,atk:14,reward:160,weak:"Futuro",zone:"Torre del Brujo",diff:3,
+  desc:"Arde en el futuro que no puede ver.",challengePool:"futuro"},
+{id:13,name:"Vampiro Elegante",icon:"🧛",hp:95,atk:13,reward:155,weak:"Imperfecto",zone:"Torre del Brujo",diff:3,
+  desc:"Vive en el tiempo imperfecto eternamente.",challengePool:"imperfecto"},
+{id:14,name:"Lobo Mannaro",icon:"🐺",hp:105,atk:15,reward:170,weak:"Futuro",zone:"Torre del Brujo",diff:3,
+  desc:"Huye del futuro simple.",challengePool:"futuro"},
+{id:15,name:"Brujo Menor",icon:"🧙‍♂️",hp:88,atk:14,reward:165,weak:"Indefinido",zone:"Torre del Brujo",diff:3,
+  desc:"Sus hechizos fallan ante el indefinido.",challengePool:"indefinido"},
+
+// Zona 5: Montaña Maldita (difícil)
+{id:16,name:"Cíclope Rojo",icon:"🫣",hp:120,atk:16,reward:190,weak:"Condicional",zone:"Montaña Maldita",diff:3,
+  desc:"Su único ojo ve el condicional.",challengePool:"condicional"},
+{id:17,name:"Ogro Pestilente",icon:"👹",hp:130,atk:17,reward:200,weak:"Futuro",zone:"Montaña Maldita",diff:3,
+  desc:"El futuro simple lo aplasta.",challengePool:"futuro"},
+{id:18,name:"Serpiente Gigante",icon:"🐍",hp:115,atk:15,reward:185,weak:"Indefinido",zone:"Montaña Maldita",diff:3,
+  desc:"Congela al que no conjuga el indefinido.",challengePool:"indefinido"},
+{id:19,name:"Momia Antigua",icon:"⚰️",hp:125,atk:16,reward:195,weak:"Imperfecto",zone:"Montaña Maldita",diff:3,
+  desc:"Resucita si olvidas el imperfecto.",challengePool:"imperfecto"},
+
+// Zona 6: Castillo del Caos (muy difícil)
+{id:20,name:"Caballero Negro",icon:"⚔️",hp:140,atk:18,reward:220,weak:"Condicional",zone:"Castillo del Caos",diff:4,
+  desc:"Su armadura sólo se quiebra con condicional.",challengePool:"condicional"},
+{id:21,name:"Hechicero de Sombras",icon:"🌑",hp:135,atk:19,reward:215,weak:"Futuro",zone:"Castillo del Caos",diff:4,
+  desc:"Sus sombras huyen del futuro.",challengePool:"futuro"},
+{id:22,name:"Quimera Feroz",icon:"🦁",hp:150,atk:20,reward:230,weak:"Condicional",zone:"Castillo del Caos",diff:4,
+  desc:"Tres cabezas, un miedo: el condicional.",challengePool:"condicional"},
+{id:23,name:"Medusa Petrificante",icon:"🐉",hp:145,atk:18,reward:225,weak:"Indefinido",zone:"Castillo del Caos",diff:4,
+  desc:"Te petrifica si confundes el indefinido.",challengePool:"indefinido"},
+
+// Zona 7: Abismo Final (épico)
+{id:24,name:"Demonio de Fuego",icon:"😈",hp:160,atk:22,reward:260,weak:"Condicional",zone:"Abismo Final",diff:4,
+  desc:"Arde pero el condicional lo extingue.",challengePool:"condicional"},
+{id:25,name:"Liche Inmortal",icon:"💀",hp:170,atk:21,reward:270,weak:"Imperfecto",zone:"Abismo Final",diff:4,
+  desc:"Vive eternamente en el imperfecto.",challengePool:"imperfecto"},
+{id:26,name:"Kraken de las Sombras",icon:"🦑",hp:180,atk:23,reward:280,weak:"Futuro",zone:"Abismo Final",diff:4,
+  desc:"Sus tentáculos atrapan el futuro.",challengePool:"futuro"},
+{id:27,name:"Dragón Oscuro",icon:"🐲",hp:190,atk:24,reward:300,weak:"Todos",zone:"Abismo Final",diff:5,
+  desc:"¡El BOSS FINAL! Domina todos los tiempos.",challengePool:"mixed"},
+
+// JEFES DE ZONA
+{id:28,name:"🔴 JEFE: Rey Zombi",icon:"👑",hp:100,atk:14,reward:250,weak:"Presente+Indefinido",zone:"Bosque Muerto",diff:3,isBoss:true,
+  desc:"¡Jefe del bosque! Conjugación mixta.",challengePool:"mixed"},
+{id:29,name:"🔴 JEFE: Conde Vampiro",icon:"🧛‍♂️",hp:130,atk:17,reward:300,weak:"Imperfecto+Futuro",zone:"Torre del Brujo",diff:4,isBoss:true,
+  desc:"¡El conde más poderoso!",challengePool:"mixed"},
+{id:30,name:"🔴 JEFE: Gran Brujo",icon:"🧙",hp:160,atk:20,reward:350,weak:"Condicional+Futuro",zone:"Castillo del Caos",diff:4,isBoss:true,
+  desc:"¡El brujo más sabio del reino oscuro!",challengePool:"mixed"},
+{id:31,name:"🔴 DRAGÓN SUPREMO",icon:"🐉",hp:220,atk:28,reward:500,weak:"¡TODOS!",zone:"Abismo Final",diff:5,isBoss:true,
+  desc:"¡EL JEFE FINAL DEL JUEGO!",challengePool:"mixed"}
+];
+
+// ═══════════════════════════════════════════════════════════
+//  MAP LAYOUT — 32 nodos en camino con bifurcaciones
+// ═══════════════════════════════════════════════════════════
+
+// Cada nodo: {id, monsterId, x, y, connections:[ids_de_nodos], zone}
+const MAP_NODES = [
+  // ZONA 1: Bosque Muerto (col 0-1)
+  {id:0, mId:0, x:60,  y:260, conn:[1,2]},       // start
+  {id:1, mId:1, x:160, y:180, conn:[3]},           // bifurcación arriba
+  {id:2, mId:2, x:160, y:340, conn:[3]},           // bifurcación abajo
+  {id:3, mId:3, x:260, y:260, conn:[4]},           // reunión
+  {id:4, mId:28,x:340, y:260, conn:[5,6], isBoss:true}, // BOSS 1
+
+  // ZONA 2: Pantano Oscuro (col 2-3)
+  {id:5, mId:4, x:440, y:180, conn:[7]},
+  {id:6, mId:5, x:440, y:340, conn:[7]},
+  {id:7, mId:6, x:530, y:260, conn:[8,9]},
+  {id:8, mId:7, x:615, y:180, conn:[10]},
+  {id:9, mId:8, x:615, y:340, conn:[10]},
+
+  // ZONA 3: Cueva de Cristal (col 3-4)
+  {id:10,mId:9, x:700, y:260, conn:[11,12]},
+  {id:11,mId:10,x:790, y:180, conn:[13]},
+  {id:12,mId:11,x:790, y:340, conn:[13]},
+  {id:13,mId:29,x:870, y:260, conn:[14,15], isBoss:true}, // BOSS 2 → wrap to next row
+
+  // NEW ROW (mapa scroll mental: misma canvas, segundo "carril")
+  // Zona 4: Torre del Brujo — desplazamos Y con offset 360
+  {id:14,mId:12,x:790, y:460, conn:[16]},   // salida del boss
+  {id:15,mId:13,x:700, y:460, conn:[16]},
+  {id:16,mId:14,x:615, y:460, conn:[17,18]},
+  {id:17,mId:15,x:530, y:400, conn:[19]},
+  {id:18,mId:16,x:530, y:520, conn:[19]},
+  {id:19,mId:17,x:440, y:460, conn:[20]},
+
+  // Zona 5: Montaña Maldita
+  {id:20,mId:18,x:340, y:460, conn:[21,22]},
+  {id:21,mId:19,x:250, y:400, conn:[23]},
+  {id:22,mId:20,x:250, y:520, conn:[23]},
+  {id:23,mId:30,x:160, y:460, conn:[24,25], isBoss:true}, // BOSS 3
+
+  // Zona 6: Castillo del Caos
+  {id:24,mId:21,x:160, y:600, conn:[26]},
+  {id:25,mId:22,x:250, y:600, conn:[26]},
+  {id:26,mId:23,x:340, y:600, conn:[27,28]},
+  {id:27,mId:24,x:440, y:540, conn:[29]},
+  {id:28,mId:25,x:440, y:660, conn:[29]},
+
+  // Zona 7: Abismo Final
+  {id:29,mId:26,x:530, y:600, conn:[30,31]},
+  {id:30,mId:27,x:620, y:540, conn:[32]},
+  {id:31,mId:28,x:620, y:660, conn:[32]},  // reutiliza monstruo existente
+  {id:32,mId:31,x:720, y:600, conn:[], isBoss:true} // FINAL BOSS
+];
+
+// ═══════════════════════════════════════════════════════════
+//  GAME ENGINE
+// ═══════════════════════════════════════════════════════════
+
+const G = (function(){
+
+// ── STATE ──
+let P = {
+  hp:100, maxHp:100, mp:30, maxMp:30,
+  score:0, level:1, exp:0, expNeeded:80,
+  streak:0,
+  timers:{atk:30, magic:20, heal:15}, // upgradeable
+  extraMp:0 // not used directly, stored for upgrade
+};
+let currentMonster = null;
+let currentMonsterId = null;
+let currentNodeId = null;
+let defeatedNodes = new Set();
+let availableNodes = new Set([0]);
+let waitingAnswer = false;
+let currentAction = null;
+let challengeTimer = null;
+let enemyTimer = null;
+let canAct = true;
+let epicChallenge = null;
+let pendingUpgrade = false;
+
+// ── STARS ──
+function makeStars(){
+  const c=document.getElementById('stars');
+  c.innerHTML='';
+  for(let i=0;i<70;i++){
+    const d=document.createElement('div');
+    const s=Math.random()*2+.5;
+    d.style.cssText=`position:absolute;width:${s}px;height:${s}px;border-radius:50%;background:#fff;
+      top:${Math.random()*100}%;left:${Math.random()*100}%;
+      animation:twk ${1.5+Math.random()*2}s ${Math.random()*3}s ease-in-out infinite alternate;`;
+    c.appendChild(d);
+  }
+  // inject twinkle keyframes once
+  if(!document.getElementById('twk-style')){
+    const st=document.createElement('style');
+    st.id='twk-style';
+    st.textContent='@keyframes twk{from{opacity:.15}to{opacity:.9}}';
+    document.head.appendChild(st);
+  }
+}
+
+// ── SCREEN SWITCH ──
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── START ──
+function startGame(){
+  makeStars();
+  show('scr-map');
+  drawMap();
+  updateMapStats();
+}
+
+// ── MAP ──
+const NODE_R = 22;
+const ZONE_COLORS = {
+  "Bosque Muerto":"#1a3a1a","Pantano Oscuro":"#1a2a0a",
+  "Cueva de Cristal":"#0a1a3a","Torre del Brujo":"#2a0a3a",
+  "Montaña Maldita":"#3a1a0a","Castillo del Caos":"#3a0a0a",
+  "Abismo Final":"#2a0a1a"
+};
+const ZONE_BORDER = {
+  "Bosque Muerto":"#2aaa2a","Pantano Oscuro":"#aaaa2a",
+  "Cueva de Cristal":"#2a6aff","Torre del Brujo":"#aa2aff",
+  "Montaña Maldita":"#ff6a2a","Castillo del Caos":"#ff2a2a",
+  "Abismo Final":"#ff2aaa"
+};
+
+function drawMap(){
+  const canvas=document.getElementById('mapCanvas');
+  const ctx=canvas.getContext('2d');
+  // size: fit all nodes. We use 2 rows: y up to ~520, second row ~460-660
+  // canvas is 820×700 conceptually; let's auto-size
+  const xs=MAP_NODES.map(n=>n.x); const ys=MAP_NODES.map(n=>n.y);
+  const W=Math.max(...xs)+NODE_R*2+10;
+  const H=Math.max(...ys)+NODE_R*2+10;
+  canvas.width=W; canvas.height=H;
+
+  ctx.clearRect(0,0,W,H);
+
+  // BG gradient
+  const bg=ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#080820');bg.addColorStop(1,'#0a0818');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // Grid dots
+  ctx.fillStyle='rgba(255,255,255,.04)';
+  for(let gx=20;gx<W;gx+=30)for(let gy=20;gy<H;gy+=30){
+    ctx.beginPath();ctx.arc(gx,gy,1,0,Math.PI*2);ctx.fill();
+  }
+
+  // Connections
+  MAP_NODES.forEach(node=>{
+    node.conn.forEach(cid=>{
+      const tgt=MAP_NODES[cid];
+      const fromDefeated=defeatedNodes.has(node.id);
+      const toAvailable=availableNodes.has(tgt.id)||defeatedNodes.has(tgt.id);
+      ctx.beginPath();
+      ctx.moveTo(node.x,node.y);ctx.lineTo(tgt.x,tgt.y);
+      ctx.lineWidth=3;
+      ctx.setLineDash(fromDefeated?[]:[6,4]);
+      ctx.strokeStyle=fromDefeated?'rgba(58,255,136,.4)':
+                      toAvailable?'rgba(58,136,255,.35)':'rgba(80,80,120,.25)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  });
+
+  // Nodes
+  MAP_NODES.forEach(node=>{
+    const m=MONSTERS[node.mId];
+    const defeated=defeatedNodes.has(node.id);
+    const available=availableNodes.has(node.id)&&!defeated;
+    const blocked=!defeated&&!available;
+
+    // Glow for available
+    if(available){
+      ctx.save();
+      const grad=ctx.createRadialGradient(node.x,node.y,0,node.x,node.y,NODE_R*2);
+      grad.addColorStop(0,'rgba(255,215,0,.3)');grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad;ctx.beginPath();ctx.arc(node.x,node.y,NODE_R*2,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+
+    // Circle
+    ctx.beginPath();ctx.arc(node.x,node.y,NODE_R,0,Math.PI*2);
+    const fillColor=defeated?'#0a2a10':available?(node.isBoss?'#2a0010':'#0a1a3a'):'#0a0a18';
+    ctx.fillStyle=fillColor;ctx.fill();
+    const bColor=defeated?'#3aff88':available?(node.isBoss?'#ff3a3a':'#ffd700'):'#252560';
+    ctx.strokeStyle=bColor;ctx.lineWidth=node.isBoss?3:2;ctx.stroke();
+
+    // Icon / emoji
+    ctx.font=`${blocked?14:16}px serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.globalAlpha=blocked?.35:1;
+    ctx.fillText(defeated?'✅':(blocked?'🔒':m.icon),node.x,node.y);
+    ctx.globalAlpha=1;
+
+    // Difficulty stars below
+    if(!blocked){
+      ctx.font='9px serif';ctx.textAlign='center';ctx.textBaseline='top';
+      const stars='⭐'.repeat(Math.min(m.diff||1,5));
+      ctx.fillText(stars,node.x,node.y+NODE_R+2);
+    }
+
+    // Zone label first node of each zone (rough)
+    if(node.id===0||node.id===5||node.id===10||node.id===16||node.id===20||node.id===24||node.id===29){
+      ctx.font='bold 8px "Press Start 2P", monospace';
+      ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillStyle='rgba(255,255,255,.5)';
+      ctx.fillText(m.zone||'',node.x,node.y-NODE_R-2);
+    }
+  });
+}
+
+function updateMapStats(){
+  const el=document.getElementById('map-stats');
+  el.textContent=`❤️ HP: ${P.hp}/${P.maxHp}  |  💎 MP: ${P.mp}/${P.maxMp}  |  ⭐ NVL: ${P.level}  |  🏆 Pts: ${P.score}`;
+}
+
+// ── MAP INTERACTIONS ──
+const canvas=document.getElementById('mapCanvas');
+const tooltip=document.getElementById('map-tooltip');
+
+function getNodeAt(cx,cy){
+  return MAP_NODES.find(n=>Math.hypot(n.x-cx,n.y-cy)<=NODE_R+4)||null;
+}
+
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width, sy=canvas.height/r.height;
+  const cx=(e.clientX-r.left)*sx, cy=(e.clientY-r.top)*sy;
+  const node=getNodeAt(cx,cy);
+  if(node){
+    canvas.style.cursor='pointer';
+    const m=MONSTERS[node.mId];
+    document.getElementById('tt-name').textContent=m.name;
+    document.getElementById('tt-icon').textContent=m.icon;
+    const diffStr='⭐'.repeat(m.diff||1);
+    document.getElementById('tt-diff').textContent=`Dificultad: ${diffStr}`;
+    document.getElementById('tt-weak').textContent=`⚡ Debilidad: ${m.weak}`;
+    document.getElementById('tt-stats').textContent=`❤️ ${m.hp} HP | ⚔️ ATK ${m.atk}`;
+    tooltip.style.display='block';
+    tooltip.style.left=(e.clientX+14)+'px';
+    tooltip.style.top=(e.clientY-10)+'px';
+  } else {
+    canvas.style.cursor='default';
+    tooltip.style.display='none';
+  }
+});
+canvas.addEventListener('mouseleave',()=>{ tooltip.style.display='none'; canvas.style.cursor='default'; });
+
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width, sy=canvas.height/r.height;
+  const cx=(e.clientX-r.left)*sx, cy=(e.clientY-r.top)*sy;
+  const node=getNodeAt(cx,cy);
+  if(!node) return;
+  if(!availableNodes.has(node.id)||defeatedNodes.has(node.id)) return;
+  tooltip.style.display='none';
+  startBattle(node.id, node.mId);
+});
+
+// ── BATTLE START ──
+function startBattle(nodeId, monsterId){
+  currentNodeId=nodeId;
+  currentMonsterId=monsterId;
+  const template=MONSTERS[monsterId];
+  currentMonster={...template, hp:template.hp, maxHp:template.hp};
+  canAct=true; waitingAnswer=false; currentAction=null;
+
+  // Restore MP a little
+  P.mp=Math.min(P.maxMp, P.mp+5);
+
+  // UI
+  document.getElementById('spr-enemy').textContent=currentMonster.icon;
+  document.getElementById('spr-player').textContent='🧙';
+  document.getElementById('ename-hud').textContent=currentMonster.icon+' '+currentMonster.name;
+  document.getElementById('eweakhud').textContent='⚡ '+currentMonster.weak;
+  document.getElementById('mc-icon').textContent=currentMonster.icon;
+  document.getElementById('mc-name').textContent=currentMonster.name;
+  document.getElementById('mc-desc').textContent=currentMonster.desc;
+  document.getElementById('mc-weak').textContent='⚡ Debilidad: '+currentMonster.weak;
+
+  clearLog();
+  addLog(`${currentMonster.icon} ¡Aparece ${currentMonster.name.toUpperCase()}!`,'var(--red)');
+  addLog(`❤️ ${currentMonster.hp} HP | ⚔️ ATK ${currentMonster.atk}`,'#888');
+
+  updateHUD();
+  updateActionLabels();
+  enableActions();
+  hideChallenges();
+  show('scr-battle');
+}
+
+// ── LOG ──
+function clearLog(){ document.getElementById('blog').innerHTML=''; }
+function addLog(msg,color='var(--white)'){
+  const b=document.getElementById('blog');
+  const lines=b.querySelectorAll('span');
+  if(lines.length>=3) lines[0].remove();
+  const s=document.createElement('span');
+  s.textContent=msg; s.style.color=color;
+  b.appendChild(s);
+}
+
+// ── HUD ──
+function updateHUD(){
+  set('php',P.hp); set('pmhp',P.maxHp);
+  set('pmp',P.mp); set('pmmp',P.maxMp);
+  setW('bphp',(P.hp/P.maxHp)*100);
+  setW('bpmp',(P.mp/P.maxMp)*100);
+  setW('bexp',(P.exp/P.expNeeded)*100);
+  set('plvl',P.level);
+  set('score-val',P.score);
+  if(currentMonster){
+    set('ehp',Math.max(0,currentMonster.hp));
+    set('emhp',currentMonster.maxHp);
+    setW('behp',(Math.max(0,currentMonster.hp)/currentMonster.maxHp)*100);
+  }
+  set('streak-val',P.streak);
+  const fire=document.getElementById('fire-icon');
+  const bonus=document.getElementById('streak-bonus');
+  if(P.streak>=3){
+    fire.style.display='inline-block';
+    bonus.textContent=` x${(1+Math.floor(P.streak/3)*0.5).toFixed(1)} COMBO!`;
+  } else {
+    fire.style.display='none';
+    bonus.textContent='';
+  }
+}
+function set(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function setW(id,pct){ const e=document.getElementById(id); if(e) e.style.width=Math.max(0,Math.min(100,pct))+'%'; }
+
+function updateActionLabels(){
+  set('lbl-atk',P.timers.atk);
+  set('lbl-magic',P.timers.magic);
+  set('lbl-heal',P.timers.heal);
+}
+
+// ── ACTIONS ──
+function enableActions(){
+  document.getElementById('btn-atk').disabled=false;
+  document.getElementById('btn-magic').disabled=P.mp<10;
+  document.getElementById('btn-epic').disabled=P.mp<20;
+  document.getElementById('btn-heal').disabled=P.mp<15;
+  set('turn-info','Tu turno');
+}
+function disableActions(){
+  ['btn-atk','btn-magic','btn-epic','btn-heal'].forEach(id=>{
+    document.getElementById(id).disabled=true;
+  });
+}
+function hideChallenges(){
+  document.getElementById('challenge-box').style.display='none';
+  document.getElementById('epic-wrap').style.display='none';
+}
+
+function doAction(type){
+  if(!canAct||waitingAnswer) return;
+  currentAction=type;
+  disableActions();
+  hideChallenges();
+  clearTimer();
+  stopEnemyTimer();
+
+  if(type==='epic'){
+    showEpicChallenge();
+  } else {
+    showChallenge(type);
+  }
+}
+
+// ── GET CHALLENGE ──
+function getChallenge(pool){
+  let arr;
+  if(pool==='mixed'||!CHALLENGES[pool]){
+    arr=ALL_CHALLENGES;
+  } else {
+    arr=CHALLENGES[pool];
+  }
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+function getEpicChallenge(){
+  return EPIC_CHALLENGES[Math.floor(Math.random()*EPIC_CHALLENGES.length)];
+}
+
+// ── SHOW CHALLENGE ──
+function showChallenge(type){
+  waitingAnswer=true;
+  const mpool=currentMonster.challengePool||'presente';
+  const ch=getChallenge(mpool);
+
+  let timerSec=type==='atk'?P.timers.atk:type==='magic'?P.timers.magic:P.timers.heal;
+  let header=type==='atk'?'⚔️ ATAQUE BÁSICO — Elige la conjugación correcta':
+             type==='magic'?'✨ CONJURO MÁGICO — Conjugación correcta':
+             '💊 CURAR — Elige bien para sanar';
+
+  document.getElementById('cbox-header').textContent=header;
+  // Build sentence display
+  const display=ch.sentence.replace('___','[ ___ ]');
+  document.getElementById('ctx-sentence').textContent=display;
+  document.getElementById('ctx-tag').textContent=
+    `Verbo: ${ch.infinitive} | Tiempo: ${ch.tiempo} | Persona: ${ch.persona}`;
+
+  // Build options: correct + 3 wrong (shuffled), filter duplicates
+  let wrongs=ch.wrong.filter(w=>w!==ch.blank).slice(0,3);
+  while(wrongs.length<3) wrongs.push('—'); // fallback
+  let opts=[ch.blank,...wrongs].sort(()=>Math.random()-.5);
+
+  const grid=document.getElementById('cbox-options');
+  grid.innerHTML='';
+  opts.forEach(opt=>{
+    const b=document.createElement('button');
+    b.className='opt-btn';
+    b.textContent=opt;
+    b.onclick=()=>selectOption(opt,ch,type);
+    grid.appendChild(b);
+  });
+
+  document.getElementById('challenge-box').style.display='block';
+  startChallengeTimer(timerSec,type,ch);
+}
+
+// ── SHOW EPIC ──
+function showEpicChallenge(){
+  waitingAnswer=true;
+  epicChallenge=getEpicChallenge();
+  document.getElementById('epic-sentence').textContent=epicChallenge.epic_sentence;
+  document.getElementById('epic-tag').textContent=
+    epicChallenge.epic_hint?`💡 Pista: ${epicChallenge.epic_hint}`:'';
+  document.getElementById('epic-input').value='';
+  document.getElementById('epic-wrap').style.display='flex';
+  setTimeout(()=>document.getElementById('epic-input').focus(),100);
+}
+
+function submitEpic(){
+  if(!waitingAnswer||!epicChallenge) return;
+  const input=document.getElementById('epic-input').value.trim().toLowerCase();
+  const correct=epicChallenge.answer.toLowerCase();
+  hideChallenges();
+  waitingAnswer=false;
+
+  if(input===correct){
+    correctAnswer('epic',999,epicChallenge);
+  } else {
+    // partial credit: if very close (1 char diff) give partial
+    const dist=levenshtein(input,correct);
+    if(dist===1){
+      addLog(`✅ ¡Casi! Era "${correct}". ¡Daño reducido!`,'var(--orange)');
+      P.streak++;
+      applyDamage('epic',0.5);
+      afterPlayerAction();
+    } else {
+      addLog(`❌ Incorrecto. Era "${correct}". ¡El monstruo contraataca!`,'var(--red)');
+      P.streak=0;
+      updateHUD();
+      runEnemyAttack();
+    }
+  }
+}
+
+function levenshtein(a,b){
+  const m=a.length,n=b.length;
+  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i?j?0:i:j));
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+// ── SELECT OPTION ──
+function selectOption(selected, ch, type){
+  if(!waitingAnswer) return;
+  clearTimer();
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===ch.blank) b.classList.add('correct');
+    if(b.textContent===selected&&selected!==ch.blank) b.classList.add('wrong');
+  });
+  setTimeout(()=>{
+    hideChallenges();
+    waitingAnswer=false;
+    if(selected===ch.blank){
+      correctAnswer(type,document.getElementById('ctimer-secs')?
+        parseInt(document.getElementById('ctimer-secs').textContent)||0:0, ch);
+    } else {
+      addLog(`❌ Era "${ch.blank}". ¡El monstruo aprovecha!`,'var(--red)');
+      P.streak=0;
+      updateHUD();
+      runEnemyAttack();
+    }
+  },700);
+}
+
+// ── CORRECT ANSWER ──
+function correctAnswer(type, timeLeft, ch){
+  P.streak++;
+  const streakMult=1+Math.floor(P.streak/3)*0.5;
+  const speedMult=timeLeft>=20?1.5:timeLeft>=10?1.25:1;
+
+  let baseDmg, mpCost=0;
+  switch(type){
+    case 'atk':   baseDmg=14; mpCost=0; break;
+    case 'magic': baseDmg=24; mpCost=10; break;
+    case 'epic':  baseDmg=45; mpCost=20; break;
+    case 'heal':
+      mpCost=15;
+      const healAmt=Math.round(25*streakMult);
+      P.hp=Math.min(P.maxHp,P.hp+healAmt);
+      P.mp-=mpCost;
+      addLog(`💊 ¡Te curaste ${healAmt} HP! Las palabras te sanan.`,'var(--green)');
+      showDmgNum(`+${healAmt} HP`,'left','var(--green)');
+      gainExp(10);
+      updateHUD();
+      setTimeout(()=>runEnemyAttack(),600);
+      return;
+  }
+
+  const totalDmg=Math.round(baseDmg*streakMult*speedMult);
+  P.mp=Math.max(0,P.mp-mpCost);
+  currentMonster.hp=Math.max(0,currentMonster.hp-totalDmg);
+
+  const cbonus=streakMult>1?` 🔥COMBO x${streakMult.toFixed(1)}`:'';
+  const sbonus=speedMult>1?` ⚡Rápido x${speedMult.toFixed(1)}`:'';
+  addLog(`💥 -${totalDmg} HP al monstruo!${cbonus}${sbonus}`,'var(--green)');
+  showDmgNum(`-${totalDmg}!`,'right',streakMult>=2?'var(--gold)':streakMult>1?'var(--orange)':'var(--red)');
+
+  // Animate
+  const ps=document.getElementById('spr-player');
+  const es=document.getElementById('spr-enemy');
+  ps.className='sprite spr-attack';
+  setTimeout(()=>{
+    ps.className='sprite';
+    es.className='sprite enemy-hurt';
+    setTimeout(()=>{ es.className='sprite'; },500);
+  },300);
+
+  P.score+=totalDmg*10;
+  gainExp(totalDmg);
+  updateHUD();
+
+  if(currentMonster.hp<=0){
+    setTimeout(()=>monsterDefeated(),600);
+  } else {
+    setTimeout(()=>runEnemyAttack(),600);
+  }
+}
+
+function applyDamage(type,mult=1){
+  let baseDmg=type==='epic'?45:type==='magic'?24:14;
+  const totalDmg=Math.round(baseDmg*mult);
+  currentMonster.hp=Math.max(0,currentMonster.hp-totalDmg);
+  showDmgNum(`-${totalDmg}`,'right','var(--orange)');
+  P.score+=totalDmg*5;
+  gainExp(Math.round(totalDmg*0.5));
+  updateHUD();
+}
+
+function afterPlayerAction(){
+  if(currentMonster.hp<=0) setTimeout(()=>monsterDefeated(),600);
+  else setTimeout(()=>runEnemyAttack(),600);
+}
+
+// ── CHALLENGE TIMER ──
+let timerRemaining=30;
+function startChallengeTimer(secs,type,ch){
+  clearTimer();
+  timerRemaining=secs;
+  set('ctimer-secs',timerRemaining);
+  setW('ctimerfill',100);
+  document.getElementById('cbox-timerfill').style.background='var(--green)';
+  const total=secs;
+  challengeTimer=setInterval(()=>{
+    timerRemaining--;
+    set('ctimer-secs',timerRemaining);
+    setW('ctimerfill',(timerRemaining/total)*100);
+    if(timerRemaining<=Math.floor(total*0.3))
+      document.getElementById('cbox-timerfill').style.background='var(--red)';
+    else if(timerRemaining<=Math.floor(total*0.6))
+      document.getElementById('cbox-timerfill').style.background='var(--orange)';
+    if(timerRemaining<=0){
+      clearTimer();
+      hideChallenges();
+      waitingAnswer=false;
+      addLog(`⏱ ¡Tiempo! ${currentMonster.icon} contraataca!`,'var(--orange)');
+      P.streak=0;
+      updateHUD();
+      runEnemyAttack();
+    }
+  },1000);
+}
+function clearTimer(){ clearInterval(challengeTimer); challengeTimer=null; }
+
+// ── ENEMY ATTACK (with timer) ──
+function runEnemyAttack(){
+  if(!currentMonster||currentMonster.hp<=0) return;
+  canAct=false;
+  set('turn-info','Turno del enemigo...');
+
+  // Show enemy countdown bar
+  const wrap=document.getElementById('etimer-wrap');
+  wrap.style.display='block';
+  let eCountdown=4; // seconds before enemy hits
+  set('et-secs',eCountdown);
+  setW('etfill',100);
+
+  stopEnemyTimer();
+  enemyTimer=setInterval(()=>{
+    eCountdown--;
+    set('et-secs',eCountdown);
+    setW('etfill',(eCountdown/4)*100);
+    if(eCountdown<=0){
+      stopEnemyTimer();
+      wrap.style.display='none';
+      executeEnemyHit();
+    }
+  },800);
+}
+
+function stopEnemyTimer(){
+  clearInterval(enemyTimer); enemyTimer=null;
+  document.getElementById('etimer-wrap').style.display='none';
+}
+
+function executeEnemyHit(){
+  const dmg=Math.max(1,currentMonster.atk+Math.floor(Math.random()*4)-1);
+  P.hp=Math.max(0,P.hp-dmg);
+  addLog(`${currentMonster.icon} ¡Ataca! -${dmg} HP`,'var(--red)');
+  showDmgNum(`-${dmg}`,'left','var(--red)');
+
+  const ps=document.getElementById('spr-player');
+  ps.className='sprite spr-hurt';
+  setTimeout(()=>{ ps.className='sprite'; },500);
+
+  updateHUD();
+
+  if(P.hp<=0){
+    setTimeout(()=>gameOver(),700);
+  } else {
+    canAct=true;
+    enableActions();
+    set('turn-info','Tu turno');
+  }
+}
+
+// ── DAMAGE NUMBERS ──
+function showDmgNum(text,side,color){
+  const arena=document.getElementById('arena');
+  const d=document.createElement('div');
+  d.className='dmgnum';
+  d.textContent=text;
+  d.style.color=color;
+  d.style.textShadow=`0 0 10px ${color}`;
+  d.style.left=side==='right'?'58%':'12%';
+  d.style.top='30%';
+  arena.appendChild(d);
+  setTimeout(()=>d.remove(),1200);
+}
+
+// ── EXP & LEVELS ──
+function gainExp(amount){
+  P.exp+=Math.round(amount);
+  if(P.exp>=P.expNeeded){
+    P.exp-=P.expNeeded;
+    P.expNeeded=Math.round(P.expNeeded*1.6);
+    P.level++;
+    showUpgradeScreen('level');
+  }
+}
+
+// ── UPGRADES ──
+const UPGRADES=[
+  {id:'hp',icon:'❤️',name:'Más Vida',desc:'+20 HP máximo y recuperás 15 HP ahora',
+    apply:()=>{ P.maxHp+=20; P.hp=Math.min(P.maxHp,P.hp+15); }},
+  {id:'mp',icon:'💎',name:'Más Maná',desc:'+10 MP máximo y recuperás 8 MP ahora',
+    apply:()=>{ P.maxMp+=10; P.mp=Math.min(P.maxMp,P.mp+8); }},
+  {id:'timer_atk',icon:'⏱️',name:'Más Tiempo (Ataque)',desc:'+10 segundos para el ataque básico',
+    apply:()=>{ P.timers.atk+=10; }},
+  {id:'timer_magic',icon:'⏱️',name:'Más Tiempo (Conjuro)',desc:'+8 segundos para el conjuro mágico',
+    apply:()=>{ P.timers.magic+=8; }},
+  {id:'timer_heal',icon:'⏱️',name:'Más Tiempo (Curar)',desc:'+6 segundos para curar HP',
+    apply:()=>{ P.timers.heal+=6; }},
+  {id:'score',icon:'🏆',name:'Bonus de Puntos',desc:'Ganás 200 puntos bonus ahora mismo',
+    apply:()=>{ P.score+=200; }},
+  {id:'fullheal',icon:'💖',name:'Curación Total',desc:'Recuperás todo el HP y 15 MP',
+    apply:()=>{ P.hp=P.maxHp; P.mp=Math.min(P.maxMp,P.mp+15); }},
+  {id:'combo',icon:'🔥',name:'Racha Extra',desc:'Tu siguiente ataque tiene x2 de daño (racha+3)',
+    apply:()=>{ P.streak=Math.max(P.streak,3); }}
+];
+
+function showUpgradeScreen(reason){
+  canAct=false;
+  const grid=document.getElementById('upg-grid');
+  grid.innerHTML='';
+
+  // Pick 3 random upgrades
+  const shuffled=[...UPGRADES].sort(()=>Math.random()-.5).slice(0,3);
+  shuffled.forEach(upg=>{
+    const b=document.createElement('button');
+    b.className='upg-btn';
+    b.innerHTML=`<span class="upg-icon">${upg.icon}</span> ${upg.name}
+      <span class="upg-desc">${upg.desc}</span>`;
+    b.onclick=()=>applyUpgrade(upg);
+    grid.appendChild(b);
+  });
+
+  const txt=reason==='level'?`¡Subiste al Nivel ${P.level}! Elegí una mejora:`
+    :'¡Victoria! Elegí una mejora para tu héroe:';
+  document.getElementById('ov-upg-text').textContent=txt;
+  document.getElementById('ov-upgrade').classList.add('show');
+}
+
+function applyUpgrade(upg){
+  upg.apply();
+  document.getElementById('ov-upgrade').classList.remove('show');
+  updateHUD();
+  updateActionLabels();
+  canAct=true;
+  // If this was post-win, go to map
+  if(pendingUpgrade){
+    pendingUpgrade=false;
+    goMap();
+  } else {
+    enableActions();
+  }
+}
+
+// ── MONSTER DEFEATED ──
+function monsterDefeated(){
+  stopEnemyTimer();
+  P.score+=currentMonster.reward;
+  P.mp=Math.min(P.maxMp,P.mp+8);
+  defeatedNodes.add(currentNodeId);
+
+  // Unlock connected nodes
+  const node=MAP_NODES[currentNodeId];
+  node.conn.forEach(cid=>{ availableNodes.add(cid); });
+
+  addLog(`🏆 ¡${currentMonster.name} derrotado! +${currentMonster.reward} pts`,'var(--gold)');
+
+  document.getElementById('ov-win-icon').textContent=currentMonster.icon;
+  document.getElementById('ov-win-text').textContent=
+    `¡Derrotaste a ${currentMonster.name}!\n+${currentMonster.reward} puntos | +8 MP\n¡Tus verbos son devastadores!`;
+  document.getElementById('ov-win').classList.add('show');
+}
+
+function afterWin(){
+  document.getElementById('ov-win').classList.remove('show');
+
+  // Check final boss
+  if(currentMonsterId===31){
+    document.getElementById('ov-final-text').textContent=
+      `¡Puntuación final: ${P.score}!\n¡Eres el MAESTRO VERBAL del reino!\n¡Felicitaciones, héroe!`;
+    document.getElementById('ov-final').classList.add('show');
+    return;
+  }
+
+  pendingUpgrade=true;
+  showUpgradeScreen('win');
+}
+
+// ── GAME OVER ──
+function gameOver(){
+  stopEnemyTimer();
+  clearTimer();
+  document.getElementById('ov-go-text').textContent=
+    `Fuiste derrotado por ${currentMonster.name}.\nPuntuación: ${P.score} pts\n¡Podés reintentar o elegir otro camino!`;
+  document.getElementById('ov-gameover').classList.add('show');
+}
+
+function retryBattle(){
+  document.getElementById('ov-gameover').classList.remove('show');
+  // Restore some HP
+  P.hp=Math.min(P.maxHp, Math.round(P.maxHp*0.6));
+  P.mp=Math.min(P.maxMp, P.mp+5);
+  startBattle(currentNodeId, currentMonsterId);
+}
+
+function goMap(){
+  stopEnemyTimer();
+  clearTimer();
+  document.getElementById('ov-gameover').classList.remove('show');
+  document.getElementById('ov-win').classList.remove('show');
+  hideChallenges();
+  show('scr-map');
+  drawMap();
+  updateMapStats();
+}
+
+// expose public
+return { startGame, goMap, doAction, submitEpic, afterWin, retryBattle };
+
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  AUDIO ENGINE — Web Audio API (sin archivos externos)
+// ═══════════════════════════════════════════════════════════
+const SFX = (function(){
+  let ctx = null;
+  let muted = false;
+
+  function init(){
+    if(ctx) return ctx;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+
+  // Resume context on first user interaction (browser policy)
+  document.addEventListener('click', ()=>{ if(ctx && ctx.state==='suspended') ctx.resume(); }, {once:false});
+
+  function masterGain(vol=0.4){
+    const g = ctx.createGain();
+    g.gain.value = muted ? 0 : vol;
+    g.connect(ctx.destination);
+    return g;
+  }
+
+  // ── Low-level oscillator helpers ──
+  function osc(type, freq, startT, endT, gainNode, startVol=0.5, endVol=0){
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, startT);
+    g.gain.setValueAtTime(startVol, startT);
+    g.gain.linearRampToValueAtTime(endVol, endT);
+    o.connect(g); g.connect(gainNode);
+    o.start(startT); o.stop(endT);
+  }
+
+  function sweep(type, freqStart, freqEnd, startT, dur, gainNode, vol=0.5){
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freqStart, startT);
+    o.frequency.linearRampToValueAtTime(freqEnd, startT+dur);
+    g.gain.setValueAtTime(vol, startT);
+    g.gain.linearRampToValueAtTime(0, startT+dur);
+    o.connect(g); g.connect(gainNode);
+    o.start(startT); o.stop(startT+dur+0.01);
+  }
+
+  function noise(dur, gainNode, vol=0.3){
+    // White noise burst
+    const rate = ctx.sampleRate;
+    const buf = ctx.createBuffer(1, rate*dur, rate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1);
+    const src = ctx.createBufferSource();
+    const g = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 800;
+    src.buffer = buf;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0, ctx.currentTime+dur);
+    src.connect(filter); filter.connect(g); g.connect(gainNode);
+    src.start(); src.stop(ctx.currentTime+dur);
+  }
+
+  // ══════════════ SOUND DEFINITIONS ══════════════
+
+  function play_correct(){
+    init();
+    const mg = masterGain(0.35);
+    const t = ctx.currentTime;
+    // Happy ascending arpeggio: C5-E5-G5
+    [[523,0],[659,0.1],[784,0.2]].forEach(([f,dt])=>{
+      osc('square',f,t+dt,t+dt+0.18,mg,0.4,0);
+    });
+    // Bright shimmer on top
+    sweep('sine',1200,1800,t+0.3,0.15,mg,0.2);
+  }
+
+  function play_wrong(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Descending buzz
+    sweep('sawtooth',320,80,t,0.25,mg,0.5);
+    sweep('square',200,50,t+0.05,0.2,mg,0.3);
+  }
+
+  function play_attack_basic(){
+    init();
+    const mg = masterGain(0.35);
+    const t = ctx.currentTime;
+    // Sword swoosh: noise + pitch drop
+    noise(0.08, mg, 0.5);
+    sweep('sawtooth',600,200,t,0.12,mg,0.4);
+  }
+
+  function play_attack_magic(){
+    init();
+    const mg = masterGain(0.3);
+    const t = ctx.currentTime;
+    // Magic sparkle ascending
+    [800,1000,1300,1600].forEach((f,i)=>{
+      sweep('sine',f,f*1.3,t+i*0.06,0.12,mg,0.35);
+    });
+    osc('sine',440,t,t+0.4,mg,0.2,0);
+  }
+
+  function play_attack_epic(){
+    init();
+    const mg = masterGain(0.5);
+    const t = ctx.currentTime;
+    // Heavy hit: low thud + high crack
+    sweep('sawtooth',150,40,t,0.3,mg,0.7);
+    sweep('square',800,100,t,0.15,mg,0.5);
+    noise(0.12, mg, 0.6);
+    // Echo after
+    setTimeout(()=>{
+      if(muted) return;
+      const mg2 = masterGain(0.2);
+      sweep('sawtooth',80,20,ctx.currentTime,0.2,mg2,0.4);
+    },200);
+  }
+
+  function play_heal(){
+    init();
+    const mg = masterGain(0.3);
+    const t = ctx.currentTime;
+    // Soft healing chime: descending then ascending
+    [880,660,880,1046].forEach((f,i)=>{
+      osc('sine',f,t+i*0.1,t+i*0.1+0.15,mg,0.3,0);
+    });
+  }
+
+  function play_enemy_attack(){
+    init();
+    const mg = masterGain(0.45);
+    const t = ctx.currentTime;
+    // Monster roar-hit: low growl + impact
+    sweep('sawtooth',200,60,t,0.2,mg,0.6);
+    noise(0.1, mg, 0.4);
+    osc('square',80,t+0.1,t+0.3,mg,0.5,0);
+  }
+
+  function play_player_hurt(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Pain yelp: quick high-low
+    sweep('square',500,200,t,0.15,mg,0.4);
+    osc('sine',300,t+0.1,t+0.25,mg,0.3,0);
+  }
+
+  function play_monster_die(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Monster death: descending warble
+    for(let i=0;i<6;i++){
+      const freq = 400 - i*50;
+      osc('sawtooth',freq,t+i*0.06,t+i*0.06+0.1,mg,0.4*(1-i/6),0);
+    }
+    noise(0.3, mg, 0.3);
+  }
+
+  function play_victory(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Victory fanfare: C-E-G-C (ascending)
+    const notes=[262,330,392,523,659];
+    notes.forEach((f,i)=>{
+      osc('square',f,t+i*0.12,t+i*0.12+0.18,mg,0.45,0);
+    });
+    // Sparkle finish
+    setTimeout(()=>{
+      const mg2=masterGain(0.25);
+      [1046,1319,1568].forEach((f,i)=>{
+        osc('sine',f,ctx.currentTime+i*0.08,ctx.currentTime+i*0.08+0.15,mg2,0.3,0);
+      });
+    },700);
+  }
+
+  function play_gameover(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Sad descending trombone-ish
+    const notes=[330,294,262,220,196];
+    notes.forEach((f,i)=>{
+      osc('sawtooth',f,t+i*0.18,t+i*0.18+0.22,mg,0.4,0.1);
+    });
+  }
+
+  function play_levelup(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Level up jingle
+    const notes=[392,523,659,784,1046];
+    notes.forEach((f,i)=>{
+      osc('square',f,t+i*0.1,t+i*0.1+0.15,mg,0.4,0);
+    });
+    osc('sine',1046,t+0.55,t+0.9,mg,0.35,0);
+  }
+
+  function play_select(){
+    init();
+    const mg = masterGain(0.2);
+    const t = ctx.currentTime;
+    sweep('square',400,600,t,0.08,mg,0.35);
+  }
+
+  function play_timeout(){
+    init();
+    const mg = masterGain(0.4);
+    const t = ctx.currentTime;
+    // Alarm-like beeping
+    [0,0.15,0.30].forEach(dt=>{
+      sweep('square',880,880,t+dt,0.1,mg,0.4);
+    });
+    sweep('sawtooth',440,220,t+0.45,0.25,mg,0.5);
+  }
+
+  function play_combo(){
+    init();
+    const mg = masterGain(0.3);
+    const t = ctx.currentTime;
+    // Combo sparkle
+    [600,800,1000,1300].forEach((f,i)=>{
+      osc('sine',f,t+i*0.05,t+i*0.05+0.1,mg,0.35,0);
+    });
+  }
+
+  function play_map_select(){
+    init();
+    const mg = masterGain(0.25);
+    const t = ctx.currentTime;
+    sweep('sine',300,500,t,0.12,mg,0.4);
+    osc('sine',700,t+0.1,t+0.22,mg,0.3,0);
+  }
+
+  function play_epic_submit(){
+    init();
+    const mg = masterGain(0.3);
+    const t = ctx.currentTime;
+    // Typewriter + confirm
+    noise(0.05,mg,0.4);
+    sweep('square',200,400,t+0.05,0.1,mg,0.4);
+  }
+
+  function play_upgrade(){
+    init();
+    const mg = masterGain(0.35);
+    const t = ctx.currentTime;
+    // Upgrade chime: bright triad
+    [[523,0],[659,0.1],[784,0.2],[1046,0.32]].forEach(([f,dt])=>{
+      osc('sine',f,t+dt,t+dt+0.2,mg,0.4,0);
+    });
+  }
+
+  // ── Mute toggle button ──
+  function addMuteBtn(){
+    const btn = document.createElement('button');
+    btn.id='mute-btn';
+    btn.textContent='🔊';
+    btn.title='Silenciar/Activar sonido';
+    btn.style.cssText=`position:fixed;top:8px;right:8px;z-index:9999;
+      font-size:16px;background:rgba(0,0,20,.8);border:1px solid #333;
+      color:#fff;padding:4px 8px;cursor:pointer;font-family:monospace;`;
+    btn.onclick=()=>{
+      muted=!muted;
+      btn.textContent=muted?'🔇':'🔊';
+      play_select();
+    };
+    document.body.appendChild(btn);
+  }
+
+  return {
+    correct:   play_correct,
+    wrong:     play_wrong,
+    atkBasic:  play_attack_basic,
+    atkMagic:  play_attack_magic,
+    atkEpic:   play_attack_epic,
+    heal:      play_heal,
+    enemyAtk:  play_enemy_attack,
+    playerHurt:play_player_hurt,
+    monsterDie:play_monster_die,
+    victory:   play_victory,
+    gameover:  play_gameover,
+    levelup:   play_levelup,
+    select:    play_select,
+    timeout:   play_timeout,
+    combo:     play_combo,
+    mapSelect: play_map_select,
+    epicSubmit:play_epic_submit,
+    upgrade:   play_upgrade,
+    addMuteBtn
+  };
+})();
+
+// ── Inyectar sonidos en el engine del juego ──
+// Parchar funciones del engine G para que disparen audio
+
+// 1. Botón mute al cargar
+window.addEventListener('DOMContentLoaded', ()=>SFX.addMuteBtn());
+
+// 2. Parchamos los botones de acción para sonido de select
+document.getElementById('btn-atk').addEventListener('mousedown',()=>SFX.select());
+document.getElementById('btn-magic').addEventListener('mousedown',()=>SFX.select());
+document.getElementById('btn-epic').addEventListener('mousedown',()=>SFX.select());
+document.getElementById('btn-heal').addEventListener('mousedown',()=>SFX.select());
+
+// 3. Parchamos el mapa
+document.getElementById('mapCanvas').addEventListener('click', e=>{
+  // Solo si hay nodo disponible (la lógica del click ya lo verifica)
+  SFX.mapSelect();
+});
+
+// 4. Parchamos overlay buttons
+document.querySelectorAll('.obtn, .upg-btn, .big-btn').forEach(b=>{
+  b.addEventListener('mousedown',()=>SFX.select());
+});
+
+// 5. Monkey-patch funciones del engine para audio
+// Guardamos referencia al módulo G y sobre-escribimos con wrappers
+(function patchGameAudio(){
+
+  // selectOption → correcto/incorrecto
+  const origSelectOpt = window._origSelectOpt;
+
+  // La forma más limpia: event-driven via MutationObserver en el log
+  const blog = document.getElementById('blog');
+  const logObserver = new MutationObserver(mutations=>{
+    mutations.forEach(m=>{
+      m.addedNodes.forEach(node=>{
+        if(node.nodeType!==1) return;
+        const txt = node.textContent || '';
+        const col = node.style.color || '';
+
+        if(txt.startsWith('💥') && col.includes('green')){
+          // Ataque exitoso
+          const action = window._lastAction || 'atk';
+          if(action==='atk')        SFX.atkBasic();
+          else if(action==='magic') SFX.atkMagic();
+          else if(action==='epic')  SFX.atkEpic();
+          // Combo sound
+          const streakVal = parseInt(document.getElementById('streak-val').textContent)||0;
+          if(streakVal>0 && streakVal%3===0) setTimeout(()=>SFX.combo(),300);
+        }
+        else if(txt.includes('curaste')){
+          SFX.heal();
+        }
+        else if(txt.startsWith('❌') || txt.includes('Incorrecto')){
+          SFX.wrong();
+        }
+        else if(txt.startsWith('⏱')){
+          SFX.timeout();
+        }
+        else if(txt.includes('contraataca') || txt.includes('derrotado')){
+          // enemy about to hit — sound plays in executeEnemyHit
+        }
+        else if(txt.includes('Aparece') || txt.includes('APARECE')){
+          // battle start — monster roar
+          setTimeout(()=>SFX.enemyAtk(),400);
+        }
+        else if(txt.startsWith('🏆') && txt.includes('derrotado')){
+          SFX.monsterDie();
+          setTimeout(()=>SFX.victory(),600);
+        }
+        // Enemy attack hit (red, has icon)
+        else if(col.includes('red') && txt.includes('Ataca')){
+          SFX.enemyAtk();
+          setTimeout(()=>SFX.playerHurt(),150);
+        }
+      });
+    });
+  });
+  logObserver.observe(blog, {childList:true});
+
+  // Overlay observer → level up, game over, upgrade
+  const overlayLU = document.getElementById('ov-upgrade');
+  const overlayGO = document.getElementById('ov-gameover');
+  const overlayW  = document.getElementById('ov-win');
+
+  new MutationObserver(()=>{
+    if(overlayLU.classList.contains('show')) SFX.levelup();
+  }).observe(overlayLU,{attributes:true,attributeFilter:['class']});
+
+  new MutationObserver(()=>{
+    if(overlayGO.classList.contains('show')) SFX.gameover();
+  }).observe(overlayGO,{attributes:true,attributeFilter:['class']});
+
+  new MutationObserver(()=>{
+    if(overlayW.classList.contains('show')) SFX.victory();
+  }).observe(overlayW,{attributes:true,attributeFilter:['class']});
+
+  // Track which action button was pressed last
+  ['btn-atk','btn-magic','btn-epic','btn-heal'].forEach(id=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      window._lastAction = id.replace('btn-','');
+    });
+  });
+
+  // Epic submit button
+  document.querySelector('.epic-submit').addEventListener('click',()=>SFX.epicSubmit());
+
+  // Upgrade chosen
+  document.getElementById('upg-grid').addEventListener('click',()=>{
+    setTimeout(()=>SFX.upgrade(),100);
+  });
+
+  // Option buttons (correct / wrong feedback)
+  document.getElementById('cbox-options').addEventListener('click', e=>{
+    const btn = e.target.closest('.opt-btn');
+    if(!btn) return;
+    // delay to after class is added
+    setTimeout(()=>{
+      if(btn.classList.contains('correct')) SFX.correct();
+      else if(btn.classList.contains('wrong')) SFX.wrong();
+    },50);
+  });
+
+  // Timer urgent beep (last 5 seconds)
+  // We observe the timer text
+  const timerEl = document.getElementById('ctimer-secs');
+  if(timerEl){
+    new MutationObserver(()=>{
+      const v = parseInt(timerEl.textContent)||99;
+      if(v<=5 && v>0 && v%1===0){
+        // tick sound
+        const c = new (window.AudioContext||window.webkitAudioContext)();
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.frequency.value = v<=2?1200:900;
+        g.gain.setValueAtTime(0.3,c.currentTime);
+        g.gain.linearRampToValueAtTime(0,c.currentTime+0.08);
+        o.connect(g); g.connect(c.destination);
+        o.start(); o.stop(c.currentTime+0.1);
+      }
+    }).observe(timerEl,{childList:true,characterData:true,subtree:true});
+  }
+
+  // Enemy timer urgent ticks
+  const etEl = document.getElementById('et-secs');
+  if(etEl){
+    new MutationObserver(()=>{
+      const v = parseInt(etEl.textContent)||99;
+      if(v>=1 && v<=4){
+        const c = new (window.AudioContext||window.webkitAudioContext)();
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type='square';
+        o.frequency.value = 150;
+        g.gain.setValueAtTime(0.25,c.currentTime);
+        g.gain.linearRampToValueAtTime(0,c.currentTime+0.1);
+        o.connect(g); g.connect(c.destination);
+        o.start(); o.stop(c.currentTime+0.12);
+      }
+    }).observe(etEl,{childList:true,characterData:true,subtree:true});
+  }
+
+})();
+</script>
+</body>
+</html>
